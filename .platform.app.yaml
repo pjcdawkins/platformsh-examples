@@ -18,10 +18,10 @@ relationships:
 # The configuration of app when it is exposed to the web.
 web:
     # The public directory of the app, relative to its root.
-    document_root: "/web"
+    document_root: "/public"
     # The front-controller script to send non-static requests to.
-    passthru: "/app.php"
-    
+    passthru: "/index.php"
+
 
 # The size of the persistent disk of the application (in MB).
 disk: 2048
@@ -30,10 +30,13 @@ disk: 2048
 mounts:
     "/app/cache": "shared:files/cache"
     "/app/logs": "shared:files/logs"
-
+    "/app/storage": "shared:files/storage"
 # The hooks that will be performed when the package is deployed.
 hooks:
-    build: "./app/console cache:clear --env=prod --no-debug ; ./app/console assetic:dump --env=prod --no-debug"
+    deploy: |
+        mkdir -p app/storage/meta
+        mkdir -p app/storage/logs
+        mkdir -p app/storage/sessions
 
 # The configuration of scheduled execution.
 # see http://symfony.com/doc/current/components/console/introduction.html
