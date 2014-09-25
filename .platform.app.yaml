@@ -20,7 +20,6 @@ web:
     document_root: "/web"
     # The front-controller script to send non-static requests to.
     passthru: "/app.php"
-    
 
 # The size of the persistent disk of the application (in MB).
 disk: 2048
@@ -36,7 +35,6 @@ hooks:
       rm web/app_dev.php
       app/console --env=prod assetic:dump --no-debug
     deploy: |
-      app/console --env=prod doctrine:database:create
       app/console --env=prod doctrine:phpcr:init:dbal
       app/console --env=prod doctrine:phpcr:workspace:create sandbox
       app/console --env=prod doctrine:phpcr:repository:init
