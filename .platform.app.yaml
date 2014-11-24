@@ -22,64 +22,64 @@ web:
     document_root: "/"
     # The front-controller script to send non-static requests to.
     passthru: "/index.php"
-    # The whitelist of files that may be served.
+    # The whitelist of files that may be served (regular expressions).
     whitelist:
     # CSS and Javascript.
-    - "\.css$"
-    - "\.js$"
+    - "\\.css$"
+    - "\\.js$"
 
     # image/* types.
-    - "\.gif$"
-    - "\.jpe?g$"
-    - "\.png$"
-    - "\.tiff?$"
-    - "\.wbmp$"
-    - "\.ico$"
-    - "\.jng$"
-    - "\.bmp$"
-    - "\.svgz?$"
+    - "\\.gif$"
+    - "\\.jpe?g$"
+    - "\\.png$"
+    - "\\.tiff?$"
+    - "\\.wbmp$"
+    - "\\.ico$"
+    - "\\.jng$"
+    - "\\.bmp$"
+    - "\\.svgz?$"
 
     # audio/* types.
-    - "\.midi?$"
-    - "\.mpe?ga$"
-    - "\.mp2$"
-    - "\.mp3$"
-    - "\.m4a$"
-    - "\.ra$"
-    - "\.weba$"
+    - "\\.midi?$"
+    - "\\.mpe?ga$"
+    - "\\.mp2$"
+    - "\\.mp3$"
+    - "\\.m4a$"
+    - "\\.ra$"
+    - "\\.weba$"
 
     # video/* types.
-    - "\.3gpp?$"
-    - "\.mp4$"
-    - "\.mpe?g$"
-    - "\.mpe$"
-    - "\.ogv$"
-    - "\.mov$"
-    - "\.webm$"
-    - "\.flv$"
-    - "\.mng$"
-    - "\.asx$"
-    - "\.asf$"
-    - "\.wmv$"
-    - "\.avi$"
+    - "\\.3gpp?$"
+    - "\\.mp4$"
+    - "\\.mpe?g$"
+    - "\\.mpe$"
+    - "\\.ogv$"
+    - "\\.mov$"
+    - "\\.webm$"
+    - "\\.flv$"
+    - "\\.mng$"
+    - "\\.asx$"
+    - "\\.asf$"
+    - "\\.wmv$"
+    - "\\.avi$"
 
     # application/ogg.
-    - "\.ogx$"
+    - "\\.ogx$"
 
     # application/x-shockwave-flash.
-    - "\.swf$"
+    - "\\.swf$"
 
     # application/java-archive.
-    - "\.jar$"
+    - "\\.jar$"
 
     # fonts types.
-    - "\.ttf$"
-    - "\.eot$"
-    - "\.woff$"
-    - "\.otf$"
+    - "\\.ttf$"
+    - "\\.eot$"
+    - "\\.woff$"
+    - "\\.otf$"
 
     # robots.txt.
-    - "/robots\.txt$"
+    - "^/robots\\.txt$"
 
 # The size of the persistent disk of the application (in MB).
 disk: 2048
