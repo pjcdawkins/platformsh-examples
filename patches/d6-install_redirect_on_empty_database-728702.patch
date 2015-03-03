@@ -1,0 +1,17 @@
+diff --git a/includes/database.inc b/includes/database.inc
+index 40d40c9..4fb6e20 100644
+--- a/includes/database.inc
++++ b/includes/database.inc
+@@ -157,6 +157,12 @@ function db_set_active($name = 'default') {
+   $active_name = $name;
+   $active_db = $db_conns[$name];
+ 
++  // Redirect to install.php if the database is empty.
++  if ($name == 'default' && !db_table_exists('system') && strpos($_SERVER['SCRIPT_NAME'], 'install.php') === FALSE) {
++    include_once 'includes/install.inc';
++    install_goto('install.php');
++  }
++
+   return $previous_name;
+ }
+ 
