@@ -1,0 +1,26 @@
+diff --git a/includes/database.mysql.inc b/includes/database.mysql.inc
+index 5ad5f3e..40ef120 100644
+--- a/includes/database.mysql.inc
++++ b/includes/database.mysql.inc
+@@ -56,7 +56,7 @@ function db_connect($url) {
+   }
+ 
+   // Decode urlencoded information in the db connection string
+-  $url['user'] = urldecode($url['user']);
++  $url['user'] = isset($url['user']) ? urldecode($url['user']) : '';
+   // Test if database URL has a password.
+   $url['pass'] = isset($url['pass']) ? urldecode($url['pass']) : '';
+   $url['host'] = urldecode($url['host']);
+diff --git a/install.php b/install.php
+index 0839d38..7b58eef 100644
+--- a/install.php
++++ b/install.php
+@@ -182,7 +182,7 @@ function install_verify_settings() {
+     include_once './includes/form.inc';
+ 
+     $url = parse_url(is_array($db_url) ? $db_url['default'] : $db_url);
+-    $db_user = urldecode($url['user']);
++    $db_user = isset($url['user']) ? urldecode($url['user']) : '';
+     $db_pass = isset($url['pass']) ? urldecode($url['pass']) : NULL;
+     $db_host = urldecode($url['host']);
+     $db_port = isset($url['port']) ? urldecode($url['port']) : '';
