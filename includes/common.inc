@@ -304,18 +304,17 @@ function drupal_get_destination() {
  * @param $fragment
  *   (optional) A destination fragment identifier (named anchor).
  * @param $http_response_code
- *   (optional) The HTTP status code to use for the redirection, defaults to 302.
- *   The valid values for 3xx redirection status codes are defined in
- *   @link http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3 RFC 2616 @endlink
- *   and the
- *   @link http://tools.ietf.org/html/draft-reschke-http-status-308-07 draft for the new HTTP status codes: @endlink
- *   - 301: Moved Permanently (the recommended value for most redirects).
- *   - 302: Found (default in Drupal and PHP, sometimes used for spamming search
- *     engines).
- *   - 303: See Other.
- *   - 304: Not Modified.
- *   - 305: Use Proxy.
- *   - 307: Temporary Redirect.
+ *   (optional) The HTTP status code to use for the redirection, defaults to
+ *   302. Valid values for an actual "goto" as per RFC 2616 section 10.3 are:
+ *   - 301 Moved Permanently (the recommended value for most redirects)
+ *   - 302 Found (default in Drupal and PHP, sometimes used for spamming search
+ *         engines)
+ *   - 303 See Other
+ *   - 304 Not Modified
+ *   - 305 Use Proxy
+ *   - 307 Temporary Redirect (alternative to "503 Site Down for Maintenance")
+ *   Note: Other values are defined by RFC 2616, but are rarely used and poorly
+ *   supported.
  * @see drupal_get_destination()
  */
 function drupal_goto($path = '', $query = NULL, $fragment = NULL, $http_response_code = 302) {
@@ -331,7 +330,7 @@ function drupal_goto($path = '', $query = NULL, $fragment = NULL, $http_response
   if ($destination) {
     // Do not redirect to an absolute URL originating from user input.
     $colonpos = strpos($destination, ':');
-    $absolute = ($colonpos !== FALSE && !preg_match('![/?#]!', substr($destination, 0, $colonpos)));
+    $absolute = strpos($destination, '//') === 0 || ($colonpos !== FALSE && !preg_match('![/?#]!', substr($destination, 0, $colonpos)));
     if (!$absolute) {
       extract(parse_url(urldecode($destination)));
     }
@@ -380,7 +379,10 @@ function drupal_not_found() {
 
   // Keep old path for reference, and to allow forms to redirect to it.
   if (!isset($_REQUEST['destination'])) {
-    $_REQUEST['destination'] = $_GET['q'];
+    // Make sure that the current path is not interpreted as external URL.
+    if (!menu_path_is_external($_GET['q'])) {
+      $_REQUEST['destination'] = $_GET['q'];
+    }
   }
 
   $path = drupal_get_normal_path(variable_get('site_404', ''));
@@ -410,7 +412,10 @@ function drupal_access_denied() {
 
   // Keep old path for reference, and to allow forms to redirect to it.
   if (!isset($_REQUEST['destination'])) {
-    $_REQUEST['destination'] = $_GET['q'];
+    // Make sure that the current path is not interpreted as external URL.
+    if (!menu_path_is_external($_GET['q'])) {
+      $_REQUEST['destination'] = $_GET['q'];
+    }
   }
 
   $path = drupal_get_normal_path(variable_get('site_403', ''));
@@ -666,7 +671,7 @@ function drupal_error_handler($errno, $message, $filename, $line, $context) {
     return;
   }
 
-  if ($errno & (E_ALL ^ E_DEPRECATED)) {
+  if ($errno & (E_ALL ^ E_DEPRECATED ^ E_NOTICE)) {
     $types = array(1 => 'error', 2 => 'warning', 4 => 'parse error', 8 => 'notice', 16 => 'core error', 32 => 'core warning', 64 => 'compile error', 128 => 'compile warning', 256 => 'user error', 512 => 'user warning', 1024 => 'user notice', 2048 => 'strict warning', 4096 => 'recoverable fatal error');
 
     // For database errors, we want the line number/file name of the place that
@@ -1474,12 +1479,20 @@ function url($path = NULL, $options = array()) {
     'alias' => FALSE,
     'prefix' => ''
   );
+  // A duplicate of the code from menu_path_is_external() to avoid needing
+  // another function call, since performance inside url() is critical.
   if (!isset($options['external'])) {
-    // Return an external link if $path contains an allowed absolute URL.
-    // Only call the slow filter_xss_bad_protocol if $path contains a ':' before
-    // any / ? or #.
+    // Return an external link if $path contains an allowed absolute URL. Avoid
+    // calling filter_xss_bad_protocol() if there is any slash (/), hash (#) or
+    // question_mark (?) before the colon (:) occurrence - if any - as this
+    // would clearly mean it is not a URL. If the path starts with 2 slashes
+    // then it is always considered an external URL without an explicit protocol
+    // part.
     $colonpos = strpos($path, ':');
-    $options['external'] = ($colonpos !== FALSE && !preg_match('![/?#]!', substr($path, 0, $colonpos)) && filter_xss_bad_protocol($path, FALSE) == check_plain($path));
+    $options['external'] = (strpos($path, '//') === 0)
+      || ($colonpos !== FALSE
+        && !preg_match('![/?#]!', substr($path, 0, $colonpos))
+        && filter_xss_bad_protocol($path, FALSE) == check_plain($path));
   }
 
   // May need language dependent rewriting if language.inc is present.
@@ -1508,6 +1521,11 @@ function url($path = NULL, $options = array()) {
     // Reassemble.
     return $path . $options['fragment'];
   }
+
+  // Strip leading slashes from internal paths to prevent them becoming external
+  // URLs without protocol. /example.com should not be turned into
+  // //example.com.
+  $path = ltrim($path, '/');
 
   global $base_url;
   static $script;

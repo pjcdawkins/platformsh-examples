@@ -995,8 +995,6 @@ function request_path() {
  * @param $type
  *   The category to which this message belongs. Can be any string, but the
  *   general practice is to use the name of the module calling watchdog().
- *   The $type parameter is limited to 16 characters; anything longer is
- *   truncated.
  * @param $message
  *   The message to store in the log. See t() for documentation
  *   on how $message and $variables interact. Keep $message
@@ -1006,16 +1004,8 @@ function request_path() {
  *   NULL if message is already translated or not possible to
  *   translate.
  * @param $severity
- *   The severity of the message; one of the following values as defined in
- *   @link http://www.faqs.org/rfcs/rfc3164.html RFC 3164: @endlink
- *   - WATCHDOG_EMERGENCY: Emergency, system is unusable.
- *   - WATCHDOG_ALERT: Alert, action must be taken immediately.
- *   - WATCHDOG_CRITICAL: Critical conditions.
- *   - WATCHDOG_ERROR: Error conditions.
- *   - WATCHDOG_WARNING: Warning conditions.
- *   - WATCHDOG_NOTICE: (default) Normal but significant conditions.
- *   - WATCHDOG_INFO: Informational messages.
- *   - WATCHDOG_DEBUG: Debug-level messages.
+ *   The severity of the message, as per RFC 3164. Possible values are
+ *   WATCHDOG_ERROR, WATCHDOG_WARNING, etc.
  * @param $link
  *   A link to associate with the message.
  *
@@ -1242,6 +1232,35 @@ function _drupal_bootstrap($phase) {
     case DRUPAL_BOOTSTRAP_LATE_PAGE_CACHE:
       // Initialize configuration variables, using values from settings.php if available.
       $conf = variable_init(isset($conf) ? $conf : array());
+
+      // Sanitize the destination parameter (which is often used for redirects)
+      // to prevent open redirect attacks leading to other domains. Sanitize
+      // both $_GET['destination'] and $_REQUEST['destination'] to protect code
+      // that relies on either, but do not sanitize $_POST to avoid interfering
+      // with unrelated form submissions. $_REQUEST['edit']['destination'] is
+      // also sanitized since drupal_goto() will sometimes rely on it, and
+      // other code might therefore use it too. The sanitization happens here
+      // because menu_path_is_external() requires the variable system to be
+      // available.
+      if (isset($_GET['destination']) || isset($_REQUEST['destination']) || isset($_REQUEST['edit']['destination'])) {
+        require_once './includes/menu.inc';
+        drupal_load('module', 'filter');
+        // If the destination is an external URL, remove it.
+        if (isset($_GET['destination']) && menu_path_is_external($_GET['destination'])) {
+          unset($_GET['destination']);
+          unset($_REQUEST['destination']);
+        }
+        // If there's still something in $_REQUEST['destination'] that didn't
+        // come from $_GET, check it too.
+        if (isset($_REQUEST['destination']) && (!isset($_GET['destination']) || $_REQUEST['destination'] != $_GET['destination']) && menu_path_is_external($_REQUEST['destination'])) {
+          unset($_REQUEST['destination']);
+        }
+        // Check $_REQUEST['edit']['destination'] separately.
+        if (isset($_REQUEST['edit']['destination']) && menu_path_is_external($_REQUEST['edit']['destination'])) {
+          unset($_REQUEST['edit']['destination']);
+        }
+      }
+
       $cache_mode = variable_get('cache', CACHE_DISABLED);
       // Get the page from the cache.
       $cache = $cache_mode == CACHE_DISABLED ? '' : page_get_cache();
@@ -1515,4 +1534,50 @@ function drupal_random_bytes($count) {
   $output = substr($bytes, 0, $count);
   $bytes = substr($bytes, $count);
   return $output;
+}
+
+/**
+ * Calculates a hexadecimal encoded sha-1 hmac.
+ *
+ * @param string $data
+ *   String to be validated with the hmac.
+ * @param string $key
+ *   A secret string key.
+ *
+ * See RFC2104 (http://www.ietf.org/rfc/rfc2104.txt). Note, the result of this
+ * must be identical to using hash_hmac('sha1', $data, $key);  We don't use
+ * that function since PHP can be missing it if it was compiled with the
+ * --disable-hash switch.
+ *
+ * @return string
+ *   A hexadecimal encoded sha-1 hmac.
+ */
+function drupal_hash_hmac_sha1($data, $key) {
+  // Keys longer than the 64 byte block size must be hashed first.
+  if (strlen($key) > 64) {
+    $key = pack("H*", sha1($key));
+  }
+  return sha1((str_pad($key, 64, chr(0x00)) ^ (str_repeat(chr(0x5c), 64))) . pack("H*", sha1((str_pad($key, 64, chr(0x00)) ^ (str_repeat(chr(0x36), 64))) . $data)));
+}
+
+/**
+ * Calculates a base-64 encoded, URL-safe sha-1 hmac.
+ *
+ * @param string $data
+ *   String to be validated with the hmac.
+ * @param string $key
+ *   A secret string key.
+ *
+ * @return string
+ *   A base-64 encoded sha-1 hmac, with + replaced with -, / with _ and
+ *   any = padding characters removed.
+ */
+function drupal_hmac_base64($data, $key) {
+  // Casting $data and $key to strings here is necessary to avoid empty string
+  // results of the hash function if they are not scalar values. As this
+  // function is used in security-critical contexts like token validation it is
+  // important that it never returns an empty string.
+  $hmac = base64_encode(pack("H*", drupal_hash_hmac_sha1((string) $data, (string) $key)));
+  // Modify the hmac so it's safe to use in URLs.
+  return strtr($hmac, array('+' => '-', '/' => '_', '=' => ''));
 }
