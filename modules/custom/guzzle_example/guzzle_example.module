@@ -1,0 +1,23 @@
+<?php
+/**
+ * @file
+ * The Guzzle example module.
+ *
+ * This does not actually do anything.
+ */
+
+/**
+ * Function to retrieve some data from an external service.
+ *
+ * @param string $url
+ *   The URL of the external resource.
+ *
+ * @return array
+ *   The data.
+ */
+function guzzle_example_get_data($url) {
+  $client = new \GuzzleHttp\Client();
+  $response = $client->get($url);
+
+  return (array) $response->json();
+}

@@ -1,0 +1,4 @@
+name = Guzzle example
+description = Example of a module requiring Guzzle via Composer Manager
+core = 7.x
+dependencies[] = composer_manager
