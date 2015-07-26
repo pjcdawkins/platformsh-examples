@@ -7,9 +7,6 @@
 // Install with the 'standard' profile for this example.
 $settings['install_profile'] = 'standard';
 
-// You should modify the hash_salt so that it is specific to your application.
-$settings['hash_salt'] = '4946c1912834b8477cc70af309a2c30dcec24c2103c724ff30bf13b4c10efd82';
-
 /**
  * Default Drupal 8 settings.
  *
@@ -42,6 +39,17 @@ if (isset($_ENV['PLATFORM_ROUTES'])) {
     }
   }
   $settings['trusted_host_patterns'] = array_unique($settings['trusted_host_patterns']);
+}
+
+// Populate $settings based on Platform.sh variables.
+if (isset($_ENV['PLATFORM_VARIABLES'])) {
+  $variables = json_decode(base64_decode($_ENV['PLATFORM_VARIABLES']), TRUE);
+  $prefix_len = strlen('drupal:');
+  foreach ($variables as $name => $value) {
+    if (substr($name, 0, $prefix_len) == 'drupal:') {
+      $settings[substr($name, $prefix_len)] = $value;
+    }
+  }
 }
 
 // Local settings. These are required for Platform.sh.
